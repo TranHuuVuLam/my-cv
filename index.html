@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRAN HUU VU LAM - Interactive Buffalo CV</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+        
+        body { 
+            background-color: #f7f7f7; 
+            color: #333; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            user-select: none; 
+            position: relative; 
+            padding: 20px 10px 100px 10px;
+            overflow-x: hidden; /* FIX: Chan cuon ngang tren thiet bi di dong */
+        }
+        
+        .app-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 950px;
+            margin: auto;
+        }
+
+        #cv-app { 
+            width: 950px; 
+            height: 480px; 
+            background-color: #fff; 
+            border: 4px solid #333; 
+            position: relative; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+            overflow: hidden; 
+            transform-origin: center center;
+            flex-shrink: 0;
+        }
+        
+        .screen { position: absolute; width: 100%; height: 100%; top: 0; left: 0; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background: #fff; }
+        .active { display: flex; }
+
+        .lang-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            font-size: 12px;
+            font-weight: bold;
+            background: #fff;
+            border: 2px solid #333;
+            padding: 5px 10px;
+            box-shadow: 2px 2px 0px #333;
+            cursor: pointer;
+        }
+        .lang-switch span { color: #999; cursor: pointer; transition: color 0.2s; }
+        .lang-switch span.active-lang { color: #333; text-decoration: underline; }
+        .lang-switch:hover { background: #f0f0f0; }
+
+        h1 { font-size: 28px; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 2px; text-align: center; color: #111; }
+        .title-sub { font-size: 14px; color: #666; margin-bottom: 30px; font-weight: bold; }
+        .btn { background: #fff; color: #333; border: 2px solid #333; padding: 10px 20px; font-size: 14px; font-weight: bold; cursor: pointer; margin: 8px; text-transform: uppercase; transition: all 0.2s; box-shadow: 3px 3px 0px #333; }
+        .btn:hover { background: #333; color: #fff; box-shadow: 0px 0px 0px #333; transform: translate(3px, 3px); }
+        .btn-group { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 15px; }
+
+        .game-container { position: relative; width: 100%; height: 240px; border-bottom: 2px dashed #333; background: #fafafa; overflow: hidden; }
+        #gameCanvas { display: block; background: #fafafa; width: 100%; height: 100%; }
+        .score-board { position: absolute; top: 10px; right: 15px; font-size: 16px; font-weight: bold; z-index: 10; color: #333; }
+
+        .cv-layout { display: flex; width: 100%; height: 100%; }
+        .cv-game-side { width: 45%; height: 100%; border-right: 2px solid #333; position: relative; background: #fdfdfd; }
+        .cv-info-side { width: 55%; height: 100%; background: #1a1a1a; color: #00ff00; padding: 15px; overflow-y: auto; text-align: left; font-size: 12px; line-height: 1.6; box-shadow: inset 0 0 10px #000; }
+        .cv-info-side::-webkit-scrollbar { width: 6px; }
+        .cv-info-side::-webkit-scrollbar-thumb { background: #00ff00; border-radius: 3px; }
+        
+        .terminal-tag { color: #fff; background: #333; padding: 2px 5px; font-weight: bold; margin-right: 5px; display: inline-block; font-size: 11px; border: 1px solid #555; }
+        .terminal-link { color: #00ff00; text-decoration: underline; }
+        .terminal-link:hover { color: #fff; }
+        .terminal-header { font-size: 13px; color: #00ffff; border-bottom: 1px dashed #00ffff; padding-bottom: 5px; margin-bottom: 12px; font-weight: bold; text-transform: uppercase; }
+        .project-item { background: #222; border-left: 3px solid #00ff00; padding: 8px; margin-bottom: 10px; border-radius: 0 4px 4px 0; }
+        
+        .controls-hint { position: absolute; bottom: 5px; left: 5px; font-size: 10px; color: #666; width: 95%; text-align: center; font-weight: bold; }
+        .badge { display: inline-block; background: #2a2a2a; color: #00ff00; border: 1px solid #00ff00; padding: 2px 5px; font-size: 10px; margin: 2px; font-weight: bold; }
+
+        .footer-container { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 11px; color: #555; font-weight: bold; width: 100%; padding: 0 10px; }
+        .social-links { display: flex; justify-content: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+        .social-links a { text-decoration: none; color: #333; border: 2px solid #333; padding: 3px 6px; font-size: 10px; font-weight: bold; background: #fff; box-shadow: 2px 2px 0px #333; transition: all 0.1s; }
+        .social-links a:hover { background: #333; color: #fff; transform: translate(2px, 2px); box-shadow: 0px 0px 0px #333; }
+
+        @media (max-width: 980px) {
+            /* FIXED: Sửa lỗi vỡ cấu trúc CSS scale trên màn hình máy tính nhỏ và máy tính bảng */
+            body { justify-content: flex-start; padding-top: 60px; }
+            .app-wrapper { width: 100%; height: auto; padding: 10px 0; }
+            #cv-app { transform-origin: top center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="lang-switch" onclick="toggleLanguage()">
+    <span id="lang-vi" class="active-lang">VN</span> | <span id="lang-en">EN</span>
+</div>
+
+<div class="app-wrapper">
+    <div id="cv-app">
+        <div id="screen-start" class="screen active">
+            <h1 id="txt-main-name">TRẦN HỮU VŨ LÂM</h1>
+            <div class="title-sub" id="txt-title-sub">[ IT SUPPORT ENGINEER - INTERACTIVE BUFFALO CV ]</div>
+            <div style="font-size: 13px; max-width: 750px; text-align: center; line-height: 1.6; margin-bottom: 25px; color: #444;" id="txt-welcome">
+                Chào mừng Nhà tuyển dụng! Đây là hệ thống CV tương tác mô phỏng hành trình của chú Trâu IT chuyên cày cuốc hạ tầng kỹ thuật. Hãy lựa chọn hình thức khám phá thông tin bên dưới:
+            </div>
+            <div class="btn-group">
+                <button class="btn" id="btn-download-pdf" onclick="downloadCV()">📥 Tải CV Bản Cứng (PDF)</button>
+                <button class="btn" id="btn-play-game" onclick="startGameMode()">🐂 Điều khiển Trâu Vượt Ải</button>
+            </div>
+        </div>
+
+        <div id="screen-game" class="screen" style="padding: 0; justify-content: flex-start;">
+            <div style="padding: 12px 0 4px 0; font-weight: bold; text-transform: uppercase; font-size: 13px; letter-spacing: 1px;" id="txt-game-hint">Giúp chú Trâu né vật cản để nạp dữ liệu (Đích: 200m)</div>
+            <div class="game-container">
+                <div class="score-board"><span id="txt-distance">KHOẢNG CÁCH</span>: <span id="liveScore">0</span>m</div>
+                <canvas id="gameCanvas" width="950" height="240"></canvas>
+            </div>
+            <div class="btn-group" style="margin-top: 12px;">
+                <div style="font-size: 11px; color: #666; width: 100%; text-align: center; margin-bottom: 5px; font-weight: bold;" id="txt-game-tip">Mẹo: Ấn phím [SPACE] hoặc bấm Chuột vào màn hình để Nhảy thấp né vật cản</div>
+                <button class="btn" id="btn-replay" onclick="resetGame()">🔄 Chơi lại</button>
+                <button class="btn" id="btn-skip" onclick="initInteractiveCV()">💻 Bỏ qua & Xem CV ngay</button>
+            </div>
+        </div>
+
+        <div id="screen-end" class="screen">
+            <h1 id="endTitle">TRÒ CHƠI KẾT THÚC</h1>
+            <p id="endDesc" style="margin: 15px 0; font-size: 14px; text-align: center; max-width: 650px; line-height: 1.6;"></p>
+            <div class="btn-group">
+                <button class="btn" id="btn-end-replay" onclick="resetGame()">🎮 Chơi lại</button>
+                <button class="btn" id="btn-end-explore" onclick="initInteractiveCV()">🖥️ Khám phá CV cùng Trâu IT</button>
+            </div>
+        </div>
+
+        <div id="screen-cv" class="screen" style="padding: 0;">
+            <div class="cv-layout">
+                <div class="cv-game-side">
+                    <div style="padding: 8px; font-size: 11px; font-weight: bold; background: #333; color: #fff; text-align: center; text-transform: uppercase; letter-spacing: 1px;" id="txt-map-title">
+                        Di chuyển Trâu qua các trạm dữ liệu
+                    </div>
+                    <canvas id="cvCanvas" width="425" height="450"></canvas>
+                    <div class="controls-hint" id="txt-controls-hint">Dùng phím MŨI TÊN [◀] [▶] hoặc nhấn giữ nút bấm bên dưới</div>
+                    <div style="display: flex; justify-content: center; gap: 10px; position: absolute; bottom: 25px; width: 100%;">
+                        <button class="btn" style="padding: 5px 15px;" id="btnMoveLeft">◀ LÙI</button>
+                        <button class="btn" style="padding: 5px 15px;" id="btnMoveRight">TIẾN ▶</button>
+                    </div>
+                </div>
+                <div class="cv-info-side" id="terminalDisplay"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="footer-container">
+    <div id="txt-copyright">© 2026 Bản quyền thuộc về Trần Hữu Vũ Lâm</div>
+    <div class="social-links">
+        <a href="https://github.com/" target="_blank">GITHUB</a>
+        <a href="https://www.upwork.com/" target="_blank">UPWORK</a>
+        <a href="https://www.fiverr.com/" target="_blank">FIVERR</a>
+        <a href="https://www.linkedin.com/in/lamthv97/" target="_blank">LINKEDIN</a>
+        <a href="https://www.facebook.com/" target="_blank">FACEBOOK</a>
+        <a href="https://www.tiktok.com/" target="_blank">TIKTOK</a>
+        <a href="https://wa.me/84363344106" target="_blank">WHATSAPP</a>
+    </div>
+</div>
+
+<script>
+    let currentLang = 'vi';
+
+    // OPTIMIZATION: Tự động tính toán lại tỷ lệ layout tránh vỡ khung Canvas trên màn hình nhỏ
+    function resizeApp() {
+        const app = document.getElementById('cv-app');
+        const availableWidth = window.innerWidth - 20;
+        if (availableWidth < 950) {
+            const scale = availableWidth / 950;
+            app.style.transform = `scale(${scale})`;
+            document.querySelector('.app-wrapper').style.height = `${480 * scale}px`;
+        } else {
+            app.style.transform = 'none';
+            document.querySelector('.app-wrapper').style.height = 'auto';
+        }
+    }
+    window.addEventListener('resize', resizeApp);
+    window.addEventListener('DOMContentLoaded', resizeApp);
+
+    // CHÚ THÍCH: Hệ thống Từ điển đa ngôn ngữ chuyển đổi qua lại mượt mà không load lại trang
+    const uiTranslations = {
+        vi: {
+            mainName: "TRẦN HỮU VŨ LÂM",
+            titleSub: "[ IT SUPPORT ENGINEER - INTERACTIVE BUFFALO CV ]",
+            welcome: "Chào mừng Nhà tuyển dụng! Đây là hệ thống CV tương tác mô phỏng hành trình của chú Trâu IT chuyên cày cuốc hạ tầng kỹ thuật. Hãy lựa chọn hình thức khám phá thông tin bên dưới:",
+            downloadPdf: "📥 Tải CV Bản Cứng (PDF)",
+            playGame: "🐂 Điều khiển Trâu Vượt Ải",
+            gameHint: "Giúp chú Trâu né vật cản để nạp dữ liệu (Đích: 200m)",
+            distance: "KHOẢNG CÁCH",
+            gameTip: "Mẹo: Ấn phím [SPACE] hoặc bấm Chuột vào màn hình để Nhảy thấp né vật cản",
+            replay: "🔄 Chơi lại",
+            skip: "💻 Bỏ qua & Xem CV ngay",
+            endReplay: "🎮 Chơi lại",
+            endExplore: "🖥️ Khám phá CV cùng Trâu IT",
+            mapTitle: "Di chuyển Trâu qua các trạm dữ liệu",
+            controlsHint: "Dùng phím MŨI TÊN [◀] [▶] hoặc nhấn giữ nút bấm bên dưới",
+            btnLeft: "◀ LÙI",
+            btnRight: "TIẾN ▶",
+            copyright: "© 2026 Bản quyền thuộc về Trần Hữu Vũ Lâm"
+        },
+        en: {
+            mainName: "TRAN HUU VU LAM",
+            titleSub: "[ IT SUPPORT ENGINEER - INTERACTIVE BUFFALO CV ]",
+            welcome: "Welcome Recruiters! This is an interactive CV system simulating the journey of a hard-working IT Buffalo handling technical infrastructure. Choose your exploration mode below:",
+            downloadPdf: "📥 Download Hard Copy (PDF)",
+            playGame: "🐂 Control Buffalo to Pass Levels",
+            gameHint: "Help the Buffalo avoid obstacles to load data (Target: 200m)",
+            distance: "DISTANCE",
+            gameTip: "Tip: Press [SPACE] key or Click on the screen to Low Jump over obstacles",
+            replay: "🔄 Replay",
+            skip: "💻 Skip & View CV Now",
+            endReplay: "🎮 Replay",
+            endExplore: "🖥️ Explore CV with IT Buffalo",
+            mapTitle: "Move Buffalo through data stations",
+            controlsHint: "Use ARROW keys [◀] [▶] or hold the buttons below",
+            btnLeft: "◀ BACK",
+            btnRight: "NEXT ▶",
+            copyright: "© 2026 Copyright by Tran Huu Vu Lam"
+        }
+    };
+
+// DEBUGGED FIXED: Khắc phục triệt để lỗi text bị biến đổi không dấu khi đổi trạng thái nút click
+    function toggleLanguage(skipFlip = false) {
+        if (!skipFlip) {
+            currentLang = (currentLang === 'vi') ? 'en' : 'vi';
+        }
+        
+        document.getElementById('lang-vi').classList.toggle('active-lang', currentLang === 'vi');
+        document.getElementById('lang-en').classList.toggle('active-lang', currentLang === 'en');
+
+        const trans = uiTranslations[currentLang];
+        document.getElementById('txt-main-name').innerText = trans.mainName;
+        document.getElementById('txt-title-sub').innerText = trans.titleSub;
+        document.getElementById('txt-welcome').innerText = trans.welcome;
+        document.getElementById('btn-download-pdf').innerText = trans.downloadPdf;
+        document.getElementById('btn-play-game').innerText = trans.playGame;
+        document.getElementById('txt-game-hint').innerText = trans.gameHint;
+        document.getElementById('txt-distance').innerText = trans.distance;
+        document.getElementById('txt-game-tip').innerText = trans.gameTip;
+        document.getElementById('btn-replay').innerText = trans.replay;
+        document.getElementById('btn-skip').innerText = trans.skip;
+        document.getElementById('btn-end-replay').innerText = trans.endReplay;
+        document.getElementById('btn-end-explore').innerText = trans.endExplore;
+        document.getElementById('txt-map-title').innerText = trans.mapTitle;
+        document.getElementById('txt-controls-hint').innerText = trans.controlsHint;
+        document.getElementById('btnMoveLeft').innerText = trans.btnLeft;
+        document.getElementById('btnMoveRight').innerText = trans.btnRight;
+        document.getElementById('txt-copyright').innerText = trans.copyright;
+
+        // Cập nhật mảng checkpoints động theo ngôn ngữ đã chọn
+        checkpoints[0].title = (currentLang === 'vi') ? 'Khởi Đầu' : 'Origin';
+        checkpoints[1].title = (currentLang === 'vi') ? 'Hồ Sơ' : 'Profile';
+        checkpoints[2].title = (currentLang === 'vi') ? 'Kỹ Năng' : 'Skills';
+        checkpoints[3].title = (currentLang === 'vi') ? 'Kinh Nghiệm' : 'Experience';
+        checkpoints[4].title = (currentLang === 'vi') ? 'Siêu Dự Án' : 'Projects';
+        checkpoints[5].title = (currentLang === 'vi') ? 'Chứng Chỉ' : 'Certificates';
+        checkpoints[6].title = (currentLang === 'vi') ? 'TỔNG HÀNH DINH' : 'HQ STATION';
+
+        renderTerminal(lastActiveCheckpoint || 'start_point');
+
+        if (gameStatus === 'WIN') {
+            document.getElementById('endTitle').innerText = (currentLang === 'vi') ? "🐂TRÂU VÀNG HOÀN THÀNH NHIỆM VỤ!🐂" : "🐂GOLDEN BUFFALO MISSION ACCOMPLISHED!🐂";
+            document.getElementById('endDesc').innerText = (currentLang === 'vi') ? "Khỏe như trâu! Bạn đã đưa chú trâu IT vượt mốc 200m xuất sắc, hạ tầng dữ liệu kinh nghiệm làm việc đã sẵn sàng kết nối." : "Strong as a buffalo! You have successfully driven the IT buffalo past the 200m mark. Experience data infrastructure is ready to connect.";
+        } else if (gameStatus === 'LOSE') {
+            document.getElementById('endTitle').innerText = (currentLang === 'vi') ? "TRÂU CÀY GẶP SỰ CỐ MẠNG" : "BUFFALO ENCOUNTERED NETWORK ISSUES";
+            document.getElementById('endDesc').innerText = (currentLang === 'vi') ? `Chú trâu IT va chạm chướng ngại vật tại mốc ${Math.floor(score)}m! Ấn tiếp tục để sử dụng quyền quản trị viên kết nối thẳng tới hệ thống thông tin.` : `The IT buffalo collided with an obstacle at ${Math.floor(score)}m! Click continue to use admin rights to connect directly to the information system.`;
+        }
+    }
+
+    function downloadCV() {
+        const filename = 'CV_IT_ENGINEER_TRAN_HUU_VU_LAM.pdf'; 
+        const link = document.createElement('a');
+        link.href = filename;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function changeScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        resizeApp();
+    }
+
+    // CHÚ THÍCH: Vẽ môi trường background chuyển động mượt bằng HTML5 Canvas 2D
+    function drawEnvironment(renderCtx, width, height, scrollOffset) {
+        renderCtx.fillStyle = '#fffae6';
+        renderCtx.beginPath(); renderCtx.arc(width - 80, 45, 25, 0, Math.PI * 2); renderCtx.fill();
+        renderCtx.fillStyle = '#ffe0b3';
+        renderCtx.beginPath(); renderCtx.arc(width - 80, 45, 20, 0, Math.PI * 2); renderCtx.fill();
+
+        for (let i = 0; i < 4; i++) {
+            let mX = ((i * 350) - (scrollOffset * 0.2)) % (width + 400);
+            if (mX < -200) mX += width + 400;
+            renderCtx.fillStyle = '#e0e0e0';
+            renderCtx.beginPath();
+            renderCtx.moveTo(mX, 200);
+            renderCtx.lineTo(mX + 100, 110);
+            renderCtx.lineTo(mX + 200, 200);
+            renderCtx.fill();
+        }
+
+        renderCtx.fillStyle = '#f0f5eb';
+        renderCtx.fillRect(0, 175, width, 25);
+
+        renderCtx.ffffff;
+        let cloudTime = Date.now() * 0.01;
+        for (let i = 0; i < 4; i++) {
+            let cX = ((i * 300) + (cloudTime * 0.5)) % (width + 150) - 50;
+            renderCtx.beginPath();
+            renderCtx.arc(cX, 30, 12, 0, Math.PI * 2);
+            renderCtx.arc(cX + 15, 25, 15, 0, Math.PI * 2);
+            renderCtx.arc(cX + 30, 30, 10, 0, Math.PI * 2);
+            renderCtx.fill();
+        }
+
+        renderCtx.strokeStyle = '#999';
+        renderCtx.lineWidth = 1.5;
+        for (let i = 0; i < 3; i++) {
+            let birdX = ((i * 280) - (scrollOffset * 0.3) + width) % (width + 100) - 50;
+            let birdY = 60 + i * 20;
+            let wingState = Math.floor(Date.now() / 200) % 2;
+            renderCtx.beginPath();
+            if (wingState === 0) {
+                renderCtx.moveTo(birdX, birdY); renderCtx.quadraticCurveTo(birdX + 8, birdY - 8, birdX + 16, birdY);
+                renderCtx.quadraticCurveTo(birdX + 24, birdY - 8, birdX + 32, birdY);
+            } else {
+                renderCtx.moveTo(birdX, birdY - 4); renderCtx.quadraticCurveTo(birdX + 8, birdY + 4, birdX + 16, birdY - 4);
+                renderCtx.quadraticCurveTo(birdX + 24, birdY + 4, birdX + 32, birdY - 4);
+            }
+            renderCtx.stroke();
+        }
+    }
+
+    // CHÚ THÍCH: Hàm dựng mô hình Trâu bằng các khối Pixel thủ công mã hóa cứng màu sắc
+    function drawPixelBuffalo(renderCtx, x, y, legMoving) {
+        renderCtx.fillStyle = '#444444'; 
+        renderCtx.fillRect(x, y + 8, 36, 22); 
+        renderCtx.fillRect(x + 24, y + 2, 10, 8);
+        renderCtx.fillRect(x + 28, y - 2, 14, 10);
+        
+        renderCtx.fillStyle = '#111111'; 
+        renderCtx.fillRect(x + 26, y - 6, 4, 5); 
+        renderCtx.fillRect(x + 20, y - 8, 8, 3); 
+        
+        renderCtx.fillStyle = '#ffffff';
+        renderCtx.fillRect(x + 36, y, 2, 2);
+        
+        renderCtx.fillStyle = '#222222';
+        if (legMoving) {
+            renderCtx.fillRect(x + 4, y + 30, 4, 6);   
+            renderCtx.fillRect(x + 10, y + 30, 4, 3);  
+            renderCtx.fillRect(x + 22, y + 30, 4, 6);  
+            renderCtx.fillRect(x + 28, y + 30, 4, 3);  
+        } else {
+            renderCtx.fillRect(x + 4, y + 30, 4, 3);   
+            renderCtx.fillRect(x + 10, y + 30, 4, 6);
+            renderCtx.fillRect(x + 22, y + 30, 4, 3);
+            renderCtx.fillRect(x + 28, y + 30, 4, 6);
+        }
+        renderCtx.fillStyle = '#444444';
+        renderCtx.fillRect(x - 3, y + 10, 4, 8);
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let gameActive = false;
+    let gameStatus = 'PLAYING'; 
+    let dinoY = 164; 
+    let dinoVelocityY = 0;
+    let isJumping = false;
+    let score = 0;
+    let obstacleX = 1000;
+    let obstacleType = 0; 
+    let obstacleY = 168;
+    let gameSpeed = 6.0;
+
+    function startGameMode() {
+        changeScreen('screen-game');
+        setTimeout(() => {
+            gameActive = true;
+            resetGameValues();
+        }, 100); 
+    }
+
+    function resetGame() {
+        gameActive = true;
+        changeScreen('screen-game');
+        resetGameValues();
+    }
+
+    function resetGameValues() {
+        gameStatus = 'PLAYING';
+        dinoY = 164;
+        dinoVelocityY = 0;
+        isJumping = false;
+        score = 0;
+        obstacleX = 1000;
+        
+        let rand = Math.random();
+        if (rand < 0.33) obstacleType = 0;
+        else if (rand < 0.66) obstacleType = 1;
+        else obstacleType = 2;
+
+        obstacleY = obstacleType === 2 ? 110 : 168; 
+        gameSpeed = 6.0;
+    }
+
+    // BUG FIX: Sửa lỗi trâu không nhảy khi chạm màn hình trên thiết bị di động (Thêm e.preventDefault và touchstart)
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !isJumping && document.getElementById('screen-game').classList.contains('active')) {
+            e.preventDefault(); // Tránh bị cuộn trang khi ấn Space
+            jump();
+        }
+    });
+    canvas.addEventListener('mousedown', () => { 
+        if (!isJumping && document.getElementById('screen-game').classList.contains('active')) {
+            jump(); 
+        }
+    });
+    canvas.addEventListener('touchstart', (e) => { 
+        e.preventDefault(); // Chống double-tap zoom lỗi nhảy trên Safari/Chrome Mobile
+        if (!isJumping && document.getElementById('screen-game').classList.contains('active')) {
+            jump(); 
+        }
+    });
+
+    // FIXED: Điều chỉnh lại thông số trọng lực (gravity) giúp hành động nhảy mượt và thật hơn, không bị lơ lửng lâu
+    function jump() {
+        dinoVelocityY = -8.5; // Lực nhảy ban đầu
+        isJumping = true;
+    }
+
+    function gameLoop() {
+        if (gameActive && document.getElementById('screen-game').classList.contains('active') && gameStatus === 'PLAYING') {
+            score += 0.15;
+            document.getElementById('liveScore').innerText = Math.floor(score);
+
+            if (score >= 200) {
+                gameStatus = 'WIN';
+                gameActive = false;
+                toggleLanguage(true);
+                changeScreen('screen-end');
+            }
+
+            dinoY += dinoVelocityY;
+            dinoVelocityY += 0.55; // Ép trọng lực kéo trâu rơi xuống
+            if (dinoY >= 164) {
+                dinoY = 164;
+                isJumping = false;
+            }
+
+            obstacleX -= gameSpeed;
+            if (obstacleX < -40) {
+                obstacleX = 1000 + Math.random() * 250;
+                let rand = Math.random();
+                if (rand < 0.33) obstacleType = 0;
+                else if (rand < 0.66) obstacleType = 1;
+                else obstacleType = 2;
+                
+                obstacleY = obstacleType === 2 ? 110 : 168;
+                gameSpeed += 0.5; // Tăng dần tốc độ theo khoảng cách để tạo độ khó
+            }
+
+            // OPTIMIZATION: Tính toán lại bounding box hitbox va chạm chuẩn xác từng px, loại bỏ lỗi chết oan
+            let dinoLeft = 50, dinoRight = 86, dinoBottom = dinoY + 36, dinoTop = dinoY;
+            let obsLeft = obstacleX;
+            let obsRight = obstacleX + (obstacleType === 1 ? 24 : (obstacleType === 2 ? 32 : 14));
+            let obsTop = obstacleY;
+            let obsBottom = obstacleY + (obstacleType === 1 ? 40 : (obstacleType === 2 ? 20 : 32));
+
+            if (dinoRight > obsLeft && dinoLeft < obsRight && dinoBottom > obsTop && dinoTop < obsBottom) {
+                gameStatus = 'LOSE';
+                gameActive = false;
+                toggleLanguage(true);
+                changeScreen('screen-end');
+            }
+        }
+
+        ctx.fillStyle = '#fafafa';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawEnvironment(ctx, canvas.width, canvas.height, score * 12);
+
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, 200); ctx.lineTo(950, 200); ctx.stroke();
+        
+        ctx.fillStyle = '#bbb';
+        for(let i=0; i<950; i+=100) {
+            let offset = (i - (score * 5)) % 1050;
+            if(offset < 0) offset += 1050;
+            ctx.fillRect(offset, 205, 15, 2);
+        }
+
+        let isLegMoving = Math.floor(score / 2) % 2 === 0;
+        drawPixelBuffalo(ctx, 50, dinoY, isLegMoving);
+
+        ctx.fillStyle = '#333';
+        if (obstacleType === 0) {
+            ctx.fillRect(obstacleX, 168, 14, 32); 
+            ctx.fillRect(obstacleX - 4, 176, 5, 4);
+            ctx.fillRect(obstacleX + 13, 180, 5, 4);
+        } else if (obstacleType === 1) {
+            ctx.fillRect(obstacleX, 160, 11, 40); 
+            ctx.fillRect(obstacleX + 13, 166, 11, 34);
+        } else if (obstacleType === 2) {
+            let wing = Math.floor(Date.now() / 150) % 2;
+            ctx.fillRect(obstacleX, obstacleY, 24, 12); 
+            ctx.fillRect(obstacleX + 24, obstacleY + 2, 6, 6); 
+            if (wing === 0) {
+                ctx.fillRect(obstacleX + 8, obstacleY - 10, 6, 10); 
+            } else {
+                ctx.fillRect(obstacleX + 8, obstacleY + 12, 6, 10); 
+            }
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+    requestAnimationFrame(gameLoop);
+
+    const cvCanvas = document.getElementById('cvCanvas');
+    const cvCtx = cvCanvas.getContext('2d');
+    
+    let walkX = 30; 
+    let isMovingLeft = false;
+    let isMovingRight = false;
+    let cvActive = false;
+    
+    const checkpoints = [
+        { x: 30,  id: 'start_point', title: 'Khởi Đầu', icon: '🌾' },
+        { x: 190,  id: 'info',     title: 'Hồ Sơ', icon: '💻' },
+        { x: 390, id: 'skills',   title: 'Kỹ Năng', icon: '🛠️' },
+        { x: 590, id: 'exp',      title: 'Kinh Nghiệm', icon: '💼' },
+        { x: 790, id: 'projects', title: 'Siêu Dự Án', icon: '🌐' },
+        { x: 990, id: 'certs',    title: 'Chứng Chỉ', icon: '📜' },
+        { x: 1220, id: 'download', title: 'TỔNG HÀNH DINH', icon: '🏢' } 
+    ];
+
+    function initInteractiveCV() {
+        gameActive = false;
+        cvActive = true;
+        changeScreen('screen-cv');
+        renderTerminal('start_point'); 
+    }
+
+    // CHÚ THÍCH: Lắng nghe sự kiện bàn phím AD / Mũi tên để điều khiển trâu đi bộ tham quan CV
+    window.addEventListener('keydown', (e) => {
+        if (!document.getElementById('screen-cv').classList.contains('active')) return;
+        if (e.key === 'ArrowLeft' || e.key === 'a') isMovingLeft = true;
+        if (e.key === 'ArrowRight' || e.key === 'd') isMovingRight = true;
+    });
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a') isMovingLeft = false;
+        if (e.key === 'ArrowRight' || e.key === 'd') isMovingRight = false;
+    });
+
+    // BUG FIX: Sửa lỗi nhấn giữ nút Lùi/Tiến ảo trên Mobile không ăn bằng cách bind mouse/touch events liên tục
+    const btnL = document.getElementById('btnMoveLeft');
+    const btnR = document.getElementById('btnMoveRight');
+    btnL.addEventListener('mousedown', () => isMovingLeft = true);
+    btnL.addEventListener('mouseup', () => isMovingLeft = false);
+    btnL.addEventListener('touchstart', (e) => { e.preventDefault(); isMovingLeft = true; });
+    btnL.addEventListener('touchend', () => isMovingLeft = false);
+    btnR.addEventListener('mousedown', () => isMovingRight = true);
+    btnR.addEventListener('mouseup', () => isMovingRight = false);
+    btnR.addEventListener('touchstart', (e) => { e.preventDefault(); isMovingRight = true; });
+    btnR.addEventListener('touchend', () => isMovingRight = false);
+
+    let lastActiveCheckpoint = "";
+
+    function cvLoop() {
+        if (cvActive && document.getElementById('screen-cv').classList.contains('active')) {
+            if (isMovingLeft) walkX -= 4.0;
+            if (isMovingRight) walkX += 4.0;
+
+            if (walkX < 15) walkX = 15;
+            if (walkX > 1320) walkX = 1320; 
+
+            checkpoints.forEach(cp => {
+                if (Math.abs(walkX - cp.x) < 40) {
+                    if (lastActiveCheckpoint !== cp.id) {
+                        lastActiveCheckpoint = cp.id;
+                        renderTerminal(cp.id);
+                    }
+                }
+            });
+        }
+
+        cvCtx.fillStyle = '#fafafa';
+        cvCtx.fillRect(0, 0, cvCanvas.width, cvCanvas.height);
+        
+        let cameraOffset = walkX - 100; 
+
+        drawEnvironment(cvCtx, cvCanvas.width, cvCanvas.height, walkX * 1.5);
+
+        cvCtx.strokeStyle = '#333';
+        cvCtx.lineWidth = 3;
+        cvCtx.beginPath(); cvCtx.moveTo(0, 320); cvCtx.lineTo(425, 320); cvCtx.stroke();
+
+        checkpoints.forEach(cp => {
+            let relativeX = cp.x - cameraOffset;
+            let isCurrent = (lastActiveCheckpoint === cp.id);
+
+            if (cp.id === 'start_point') {
+                cvCtx.fillStyle = '#f4d03f'; 
+                cvCtx.beginPath();
+                cvCtx.moveTo(relativeX - 50, 320);
+                cvCtx.quadraticCurveTo(relativeX - 35, 250, relativeX - 20, 320);
+                cvCtx.closePath();
+                cvCtx.fill();
+                cvCtx.strokeStyle = '#d4ac0d';
+                cvCtx.lineWidth = 2;
+                cvCtx.stroke();
+                
+                cvCtx.beginPath();
+                cvCtx.moveTo(relativeX - 40, 290); cvCtx.quadraticCurveTo(relativeX - 35, 270, relativeX - 30, 300);
+                cvCtx.stroke();
+
+                cvCtx.fillStyle = '#e59866'; 
+                cvCtx.fillRect(relativeX - 15, 240, 50, 80);
+                cvCtx.strokeRect(relativeX - 15, 240, 50, 80);
+
+                cvCtx.fillStyle = '#784212';
+                cvCtx.fillRect(relativeX, 275, 20, 45);
+
+                cvCtx.fillStyle = '#d35400';
+                cvCtx.beginPath();
+                cvCtx.moveTo(relativeX - 25, 240);
+                cvCtx.lineTo(relativeX + 10, 195);
+                cvCtx.lineTo(relativeX + 45, 240);
+                cvCtx.closePath();
+                cvCtx.fill();
+                cvCtx.stroke();
+
+                cvCtx.font = "bold 11px Arial";
+                cvCtx.fillStyle = isCurrent ? '#ff9900' : '#666';
+                cvCtx.textAlign = "center";
+                cvCtx.fillText(cp.icon + " " + cp.title, relativeX + 10, 182);
+
+                cvCtx.fillStyle = isCurrent ? '#ff9900' : '#ccc';
+                cvCtx.beginPath();
+                cvCtx.arc(relativeX + 10, 170, 4, 0, Math.PI * 2);
+                cvCtx.fill();
+
+            } else if (cp.id === 'download') {
+                cvCtx.fillStyle = '#455a64'; 
+                cvCtx.fillRect(relativeX - 50, 140, 65, 180);
+                cvCtx.strokeStyle = '#1c313a';
+                cvCtx.lineWidth = 3;
+                cvCtx.strokeRect(relativeX - 50, 140, 65, 180);
+
+                cvCtx.fillStyle = '#b0bec5';
+                for (let row = 0; row < 4; row++) {
+                    cvCtx.fillRect(relativeX - 42, 155 + (row * 30), 18, 18);
+                    cvCtx.fillRect(relativeX - 18, 155 + (row * 30), 18, 18);
+                    cvCtx.strokeRect(relativeX - 42, 155 + (row * 30), 18, 18);
+                    cvCtx.strokeRect(relativeX - 18, 155 + (row * 30), 18, 18);
+                }
+                cvCtx.fillStyle = '#1c313a';
+                cvCtx.fillRect(relativeX - 35, 280, 35, 40);
+
+                let satX = relativeX + 35;
+                let satY = 320;
+                cvCtx.strokeStyle = '#333';
+                cvCtx.lineWidth = 3;
+                cvCtx.beginPath();
+                cvCtx.moveTo(satX - 15, satY);
+                cvCtx.lineTo(satX, satY - 45);
+                cvCtx.lineTo(satX + 15, satY);
+                cvCtx.moveTo(satX, satY - 45);
+                cvCtx.lineTo(satX, satY - 65);
+                cvCtx.stroke();
+
+                cvCtx.fillStyle = '#e0e0e0';
+                cvCtx.beginPath();
+                cvCtx.arc(satX, satY - 65, 25, Math.PI, 0, false);
+                cvCtx.closePath();
+                cvCtx.fill();
+                cvCtx.stroke();
+                
+                cvCtx.beginPath();
+                cvCtx.moveTo(satX, satY - 65);
+                cvCtx.lineTo(satX, satY - 90);
+                cvCtx.stroke();
+                cvCtx.fillStyle = '#ff3d00'; 
+                cvCtx.fillRect(satX - 2, satY - 93, 4, 4);
+
+                if (isCurrent) {
+                    cvCtx.strokeStyle = 'rgba(0, 229, 255, ' + (0.3 + Math.sin(Date.now() * 0.01) * 0.3) + ')';
+                    cvCtx.lineWidth = 2;
+                    cvCtx.beginPath();
+                    cvCtx.arc(satX, satY - 90, 15, Math.PI * 1.2, Math.PI * 1.8);
+                    cvCtx.stroke();
+                    cvCtx.beginPath();
+                    cvCtx.arc(satX, satY - 90, 28, Math.PI * 1.2, Math.PI * 1.8);
+                    cvCtx.stroke();
+                }
+
+                cvCtx.fillStyle = isCurrent ? '#00e5ff' : '#ff1744';
+                cvCtx.beginPath();
+                cvCtx.arc(relativeX - 18, 130, 4, 0, Math.PI * 2);
+                cvCtx.fill();
+
+                cvCtx.font = "bold 11px Arial";
+                cvCtx.fillStyle = '#ff007f';
+                cvCtx.textAlign = "center";
+                cvCtx.fillText(cp.icon + " " + cp.title, relativeX - 5, 95);
+            } else {
+                cvCtx.fillStyle = '#2d2d2d'; 
+                cvCtx.fillRect(relativeX - 22, 210, 44, 110);
+                cvCtx.strokeStyle = '#111';
+                cvCtx.lineWidth = 3;
+                cvCtx.strokeRect(relativeX - 22, 210, 44, 110);
+
+                for (let slot = 0; slot < 5; slot++) {
+                    cvCtx.fillRect(relativeX - 16, 222 + (slot * 18), 32, 8);
+                }
+
+                let flashSeed = Math.floor(Date.now() / 400);
+                for (let led = 0; led < 5; led++) {
+                    let ledColor = '#00ff00';
+                    if ((flashSeed + led) % 5 === 0) ledColor = '#ff3333';
+                    if ((flashSeed + led) % 7 === 0) ledColor = '#ff9900';
+                    cvCtx.fillStyle = ledColor;
+                    cvCtx.fillRect(relativeX + 8, 224 + (led * 18), 4, 4);
+                }
+
+                cvCtx.fillStyle = isCurrent ? '#00ffff' : '#444';
+                cvCtx.beginPath();
+                cvCtx.arc(relativeX, 195, 5, 0, Math.PI * 2);
+                cvCtx.fill();
+                if (isCurrent) {
+                    cvCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+                    cvCtx.lineWidth = 2;
+                    cvCtx.beginPath();
+                    cvCtx.arc(relativeX, 195, 9, 0, Math.PI * 2);
+                    cvCtx.stroke();
+                }
+                
+                cvCtx.font = "bold 11px Arial";
+                cvCtx.fillStyle = isCurrent ? '#00e5ff' : '#333';
+                cvCtx.textAlign = "center";
+                cvCtx.fillText(cp.icon + " " + cp.title, relativeX, 182);
+            }
+        });
+
+        let dinoRenderY = 284;
+        let isWalkLegMoving = Math.floor(walkX / 8) % 2 === 0;
+        drawPixelBuffalo(cvCtx, 100 - 15, dinoRenderY, isWalkLegMoving);
+
+        requestAnimationFrame(cvLoop);
+    }
+    requestAnimationFrame(cvLoop);
+
+    const db = {
+        vi: {
+            start_point: `
+                <div class="terminal-header" style="color: #f4d03f; border-bottom-color: #f4d03f;">> [TRẠM 0/6] ĐIỂM KHỞI ĐẦU: NGÔI NHÀ LÁ & ĐỐNG RƠM QUÊ HƯƠNG</div>
+                <p style="color: #f4d03f; font-weight: bold; font-size: 14px;">⚡ STATUS: DỮ LIỆU TRỐNG (EMPTY CORE DATABASE)</p>
+                <br>
+                <p>• Hệ thống chưa phát hiện thông tin hồ sơ kinh nghiệm của ứng viên tại tọa độ này.</p>
+                <p>• <b style="color: #fff;">Ý niệm cốt truyện:</b> Xuất phát điểm từ một miền quê mộc mạc gắn liền với lũy tre, đống rơm và chú Trâu siêng năng cày cuốc, hành trình tìm kiếm và nạp kiến thức công nghệ mới chính thức bắt đầu.</p>
+                <br>
+                <div style="background: #222; padding: 10px; border-left: 3px solid #f4d03f; color: #ddd;">
+                    💥 <b>HƯỚNG DẪN:</b> Hãy nhấn nút <b>"TIẾN ▶"</b> hoặc phím mũi tên phải để điều khiển chú Trâu IT rời khỏi làng lá, đi đến kết nối trực tiếp với <b>các cụm tủ Server Rack phía trước</b> để tiến hành nạp cơ sở dữ liệu CV chuyên nghiệp!
+                </div>
+            `,
+            info: `
+                <div class="terminal-header">> [PORTAL 1/6] HỒ SƠ CÁ NHÂN & THÔNG TIN CƠ BẢN</div>
+                <p><span class="terminal-tag">HỌ VÀ TÊN</span> <b style="font-size:15px; color:#fff; letter-spacing:1px;">TRẦN HỮU VŨ LÂM</b></p>
+                <p><span class="terminal-tag">VỊ TRÍ ỨNG TUYỂN</span> <b style="color:#00ffff;">IT SUPPORT ENGINEER / SYSTEM ENGINEER</b></p>
+                <p><span class="terminal-tag">NGÀY SINH</span> 22/03/1997 | <span class="terminal-tag">GIỚI TÍNH</span> Nam</p>
+                <p><span class="terminal-tag">EMAIL</span> tranhuuvulam97@gmail.com</p>
+                <p><span class="terminal-tag">HOTLINE</span> 0363344106</p>
+                <p><span class="terminal-tag">HỌC VẤN</span> <b>Cao Đẳng Hàng Hải Việt Nam</b> - Chuyên ngành Công Nghệ Thông Tin (Tháng 07/2015 - Tháng 09/2018)</p>
+                <p><span class="terminal-tag">THÀNH TÍCH HỌC</span> Từng tham gia Kỳ thi Kỹ năng Nghề Bộ Giao thông Vận tải năm 2017 và Kỳ thi Kỹ năng Nghề Quốc gia năm 2018.</p>
+                <br>
+                <div style="color: #ffaa00; font-weight: bold;">> MỤC TIÊU NGHỀ NGHIỆP:</div>
+                <p style="font-style: italic; color:#ddd; padding-left: 5px; border-left: 2px solid #ffaa00;">
+                    "Khao khát chinh phục những thử thách mới trong ngành IT, nơi tôi có thể vận dụng tối đa khả năng nhạy bén trong giải quyết vấn đề và niềm đam mê công nghệ lớn lao. Tôi hướng tới mục tiêu tối ưu hóa trải nghiệm hỗ trợ người dùng và bứt phá giới hạn chuyên môn trong một môi trường CNTT năng động."
+                </p>
+            `,
+            skills: `
+                <div class="terminal-header">> [PORTAL 2/6] BẢN ĐỒ NĂNG LỰC CỐT LÕI</div>
+                <div style="color: #00ffff; font-weight:bold; margin-bottom:5px;">[KỸ NĂNG CHUYÊN MÔN - TECHNICAL SKILLS]</div>
+                <p>• <b>Lắp đặt & Cấu hình:</b> Cài đặt, thiết lập phần cứng (PC, Laptop, Mobile Device), phần mềm, hệ điều hành hệ thống (Windows, macOS, Linux), hạ tầng mạng, máy in, máy quét cho người dùng cuối.</p>
+                <p>• <b>Xử lý sự cố:</b> Chẩn đoán chính xác và sửa chữa triệt để các lỗi phần cứng/phần mềm, xử lý sự cố cấp quyền tài khoản, mật khẩu, mạng nội bộ LAN/WAN và các linh kiện phần cứng phức tạp.</p>
+                <p>• <b>Bảo trì & Nâng cấp:</b> Thực hiện kiểm tra định kỳ, bảo trì hệ thống định kỳ, giám sát và tối ưu hóa hiệu suất đảm bảo tính vận hành liên tục không gián đoạn.</p>
+                <p>• <b>Quản lý định danh & Quyền truy cập:</b> Thành thạo Microsoft Azure Entra ID (Azure AD) để cấp phát tài khoản người dùng, reset mật khẩu, quản lý phân nhóm cấu trúc và kiểm soát quyền truy cập.</p>
+                <p>• <b>Quản lý tài sản (Asset & Vendor Management):</b> Quản lý vòng đời thiết bị IT từ thu mua đến thanh lý, kiểm soát kho vận, làm việc cùng nhà cung cấp bên ngoài.</p>
+                <p>• <b>Hệ thống nghe nhìn (AV & Conferencing):</b> Quản lý thiết bị AV phòng họp (TV, Máy chiếu), hỗ trợ kỹ thuật cuộc họp trực tuyến.</p>
+                <br>
+                <div style="color: #00ffff; font-weight:bold; margin-bottom:5px;">[KỸ NĂNG MỀM & NGÔN NGỮ]</div>
+                <div style="margin-bottom: 5px;">
+                    <span class="badge">Communication</span> <span class="badge">Problem-Solving</span> 
+                    <span class="badge">Time Management</span> <span class="badge">Teamwork & Collaboration</span>
+                    <span class="badge">Customer Service</span> <span class="badge">Adaptability & Learning</span>
+                </div>
+                <p>• <b>Ngôn ngữ:</b> Thành thạo trôi chảy tiếng Anh và tiếng Việt, làm việc chuyên nghiệp trong môi trường đa quốc gia.</p>
+            `,
+            exp: `
+                <div class="terminal-header">> [PORTAL 3/6] LỊCH SỬ KINH NGHIỆM LÀM VIỆC</div>
+                <div class="project-item">
+                    <b style="color:#fff; font-size:13px;">Info Vietnam Technology Co., Ltd</b><br>
+                    <i style="color:#888;">Vị trí: IT System Engineer (Từ 11/2023 - Đến 12/2024)</i><br>
+                    • <b>Bảo trì phần cứng:</b> Trực tiếp triển khai lắp đặt, sửa chữa và bảo trì các thiết bị đầu cuối nhà máy bao gồm máy in, PC, laptop...<br>
+                    • <b>Bảo trì phần mềm:</b> Xử lý cài đặt, cập nhật hệ điều hành, cấu hình phần mềm văn phòng chuyên dụng, hỗ trợ kỹ thuật trực tiếp.<br>
+                    • <b>Quản lý cung ứng:</b> Điều phối quy trình mua bán vật tư trang thiết bị công nghệ thuộc phòng IT; quản lý hồ sơ chứng từ với đối tác lớn (LGD, Pioneer, Gosei, Sumiko...).<br>
+                    • <b>Quản trị hệ thống:</b> Quản lý Windows Server, Microsoft 365/Exchange Online, quản trị hạ tầng Azure Entra ID để định danh người dùng.<br>
+                    • <b>Hạ tầng mạng:</b> Thi công xây dựng, đấu nối và bảo trì hệ thống đường truyền mạng LAN, mạng cáp quang nội bộ nhà xưởng.
+                </div>
+                <div class="project-item">
+                    <b style="color:#fff; font-size:13px;">Viet Huy Audio Company</b><br>
+                    <i style="color:#888;">Vị trí: IT Staff / Marketer (Từ 01/2021 - Đến 10/2023)</i><br>
+                    • Phụ trách chuẩn bị báo cáo tình hình vận hành kinh doanh theo định kỳ hàng tuần, hàng tháng cho ban giám đốc.<br>
+                    • Quản trị hệ thống kênh mạng xã hội, quản lý khai thác tệp danh sách dữ liệu khách hàng tiềm năng qua Facebook, Zalo, Website...<br>
+                    • Lưu trữ an toàn hệ thống dữ liệu nội bộ công ty, nâng cấp các rào chắn bảo mật hệ thống thông tin.<br>
+                    • Lắp đặt, bảo dưỡng cấu hình sửa chữa thay thế các thiết bị ngoại vi, hệ thống camera giám sát, máy in, máy tính và hệ thống âm thanh.
+                </div>
+                <div class="project-item">
+                    <b style="color:#fff; font-size:13px;">Digital Technology Services and Trading Co., Ltd</b><br>
+                    <i style="color:#888;">Vị trí: Thực tập sinh / Kỹ thuật viên (Từ 01/2016 - Đến 11/2018)</i><br>
+                    • Lắp ráp, chẩn đoán lỗi và sửa chữa phần cứng linh kiện máy tính (Mainboard, CPU, RAM, nguồn, ổ cứng).<br>
+                    • Thực thi cài đặt tối ưu hệ điều hành, cập nhật driver, bộ ứng dụng văn phòng thông dụng.<br>
+                    • Thiết lập hệ thống mạng cơ sở và thực hiện bảo trì hệ thống kết nối mạng nội bộ (LAN, Modems, Routers TP-Link, D-Link).<br>
+                    • Xử lý máy in: Thực hiện bơm mực (cartridge refilling), thay thế linh kiện trống in drum, trục từ, xử lý sự cố kẹt giấy, mờ bản in.
+                </div>
+            `,
+            projects: `
+                <div class="terminal-header">> [PORTAL 4/6] DỰ ÁN TỰ DO & ĐỐI TÁC TOÀN CẦU</div>
+                <div style="font-weight:bold; color: #ff007f; margin-bottom:5px;">Freelancer | IT Support Engineer / IT Support Specialist</div>
+                <div style="color: #888; font-style:italic; margin-bottom: 8px;">Thời gian: Tháng 03/2021 - Hiện tại (Hình thức Full-time / Onsite)</div>
+                <p>Đảm nhận xử lý vận hành kỹ thuật, đấu nối hạ tầng kỹ thuật và trực tiếp triển khai, lắp đặt các hệ thống thiết bị mạng lõi doanh nghiệp cho các đối tác, tập đoàn đa quốc gia:</p>
+                <div style="margin: 8px 0; line-height: 2.3;">
+                    <span class="badge" style="background:#0055ff; color:#fff; border:none;">Fujitsu Global</span>
+                    <span class="badge" style="background:#111; color:#00ff00; border:1px solid #00ff00;">NTT Global Network</span>
+                    <span class="badge" style="background:#e60000; color:#fff; border:none;">Nike</span>
+                    <span class="badge" style="background:#ff9900; color:#fff; border:none;">AkzoNobel</span>
+                    <span class="badge" style="background:#9c27b0; color:#fff; border:none;">Perfetti Van Melle</span>
+                    <span class="badge" style="background:#00bcd4; color:#fff; border:none;">Foxconn</span>
+                    <span class="badge" style="background:#ff5722; color:#fff; border:none;">Schindler</span>
+                    <span class="badge" style="background:#4caf50; color:#fff; border:none;">MacGregor</span>
+                    <span class="badge" style="background:#607d8b; color:#fff; border:none;">RexTechnologies</span>
+                    <span class="badge" style="background:#ffaa00; color:#000; border:none;">H&M</span>
+                    <span class="badge" style="background:#a5d6a7; color:#111; border:none;">LG Display</span>
+                </div>
+                <p style="margin-top:5px;">• <b>Triển khai Hạ tầng:</b> Khảo sát sơ đồ thiết kế mạng, đi dây cáp mạng lõi, bấm đầu cáp tiêu chuẩn cấu trúc, lắp đặt thiết bị Access Point, Switch, Router và Tủ rack kỹ thuật tại hiện trường phòng máy/văn phòng.</p>
+                <p>• <b>Service Delivery:</b> Tiếp nhận và xử lý các ticket yêu cầu từ người dùng qua Jira, ServiceNow, cam kết đúng chỉ số SLA.</p>
+                <p>• <b>Identity & Access Management:</b> Quản trị Azure Entra ID thực hiện phân quyền cấp phát tài khoản nhân sự mới, cấu hình nhóm bảo mật, xử lý lỗi xác thực đa lớp MFA.</p>
+                <p>• <b>Hệ thống & Ảo hóa:</b> Hỗ trợ quản trị, duy trì hoạt động hệ thống Windows/Linux Servers, vận hành môi trường ảo hóa trên nền tảng VMware ESXi và Hyper-V platforms.</p>
+            `,
+            certs: `
+                <div class="terminal-header">> [PORTAL 5/6] CHỨNG CHỈ NGHỀ NGHIỆP QUỐC TẾ</div>
+                <div class="project-item">📌 <b>CCNA: Network Foundation</b><br><span style="color:#bbb;">Chứng chỉ nền tảng hạ tầng mạng lõi hệ thống cấp bởi Cisco.</span></div>
+                <div class="project-item">📌 <b>ITIL® Foundation 4</b><br><span style="color:#bbb;">Chứng chỉ quản trị vận hành và điều phối dịch vụ CNTT doanh nghiệp quốc tế.</span></div>
+                <div class="project-item">📌 <b>System Administration</b><br><span style="color:#bbb;">Chứng chỉ quản trị hệ thống chuyên nghiệp cấp bởi sự hợp tác Microsoft & LinkedIn.</span></div>
+                <div class="project-item">📌 <b>Project Management Foundations</b><br><span style="color:#bbb;">Chứng chỉ nền tảng phương pháp luận quản trị dự án hiệu quả.</span></div>
+            `,
+            download: `
+                <div class="terminal-header" style="color: #ff007f; border-bottom-color: #ff007f;">> [PORTAL 6/6] CỔNG HOÀN THÀNH - TẢI XUỐNG HỒ SƠ PDF</div>
+                <p style="color: #fff; font-weight: bold; margin-bottom: 8px;">Chúc mừng bạn đã đồng hành cùng chú Trâu cày đi bộ tới trạm dừng chân cuối cùng!</p>
+                <p style="margin-bottom: 15px; color: #ccc;">Hệ thống đã tập hợp đầy đủ dữ liệu gốc. Để lưu trữ hồ sơ bản cứng bản chuẩn chỉ của <b>Trần Hữu Vũ Lâm</b> về máy tính, vui lòng bấm vào nút lệnh tải xuống ở dưới:</p>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="btn" onclick="downloadCV()" style="background: #ff007f; color: #fff; border-color: #ff007f; box-shadow: 3px 3px 0px #fff; padding: 12px 28px; font-size:14px; letter-spacing:1px;">📥 TẢI XUỐNG CV GỐC (PDF)</button>
+                </div>
+            `
+        },
+        en: {
+            start_point: `
+                <div class="terminal-header" style="color: #f4d03f; border-bottom-color: #f4d03f;">> [STATION 0/6] STARTING POINT: COTTAGE HOUSE & STRAWSTACK OFFICE</div>
+                <p style="color: #f4d03f; font-weight: bold; font-size: 14px;">⚡ STATUS: EMPTY CORE DATABASE</p>
+                <br>
+                <p>• No employee experience profile data has been discovered yet at this coordinate.</p>
+                <p>• <b style="color: #fff;">Storytelling Concept:</b> Starting from a rustic homeland landscape attached to a cottage house and an IT Buffalo working hard, the quest to fetch technological knowledge officially begins.</p>
+                <br>
+                <div style="background: #222; padding: 10px; border-left: 3px solid #f4d03f; color: #ddd;">
+                    💥 <b>GUIDE:</b> Click the <b>"NEXT ▶"</b> button or Right Arrow key to move the IT Buffalo forward, matching up with <b>the Data Center Server Racks</b> ahead to stream the full resume profile!
+                </div>
+            `,
+            info: `
+                <div class="terminal-header">> [PORTAL 1/6] PERSONAL PROFILE & BASIC INFO</div>
+                <p><span class="terminal-tag">FULL NAME</span> <b style="font-size:15px; color:#fff; letter-spacing:1px;">TRAN HUU VU LAM</b></p>
+                <p><span class="terminal-tag">JOB TITLE</span> <b style="color:#00ffff;">IT SUPPORT ENGINEER / SYSTEM ENGINEER</b></p>
+                <p><span class="terminal-tag">DATE OF BIRTH</span> March 22, 1997 | <span class="terminal-tag">GENDER</span> Male</p>
+                <p><span class="terminal-tag">EMAIL</span> tranhuuvulam97@gmail.com</p>
+                <p><span class="terminal-tag">HOTLINE</span> +84 363 344 106</p>
+                <p><span class="terminal-tag">EDUCATION</span> <b>Maritime College No.1</b> - Major in Information Technology (Jul 2015 - Sep 2018)</p>
+                <p><span class="terminal-tag">ACHIEVEMENTS</span> Participated in the Ministry of Transport Vocational Skills Competition 2017 & National Vocational Skills Competition 2018.</p>
+                <br>
+                <div style="color: #ffaa00; font-weight: bold;">> CAREER OBJECTIVE:</div>
+                <p style="font-style: italic; color:#ddd; padding-left: 5px; border-left: 2px solid #ffaa00;">
+                    "Desiring to conquer new challenges in the IT industry, where I can fully utilize my problem-solving sharpness and immense passion for technology. I aim to optimize user support experiences and break professional boundaries in a dynamic IT environment."
+                </p>
+            `,
+            skills: `
+                <div class="terminal-header">> [PORTAL 2/6] CORE COMPETENCY MAP</div>
+                <div style="color: #00ffff; font-weight:bold; margin-bottom:5px;">[TECHNICAL SKILLS]</div>
+                <p>• <b>Installation & Configuration:</b> Install and set up hardware (PC, Laptop, Mobile Devices), software, OS (Windows, macOS, Linux), network infrastructure, printers, and scanners for end-users.</p>
+                <p>• <b>Troubleshooting:</b> Accurately diagnose and repair hardware/software issues, handle account permissions, passwords, local network LAN/WAN, and complex hardware components.</p>
+                <p>• <b>Maintenance & Upgrades:</b> Perform periodic checks, routine system maintenance, monitor and optimize performance to ensure non-disruptive continuous operation.</p>
+                <p>• <b>Identity & Access Management:</b> Proficient in Microsoft Azure Entra ID (Azure AD) for provisioning user accounts, resetting passwords, group management, and access control.</p>
+                <p>• <b>Asset & Vendor Management:</b> Manage IT equipment lifecycle from procurement to disposal, control logistics, and work with external vendors.</p>
+                <p>• <b>AV & Conferencing:</b> Manage meeting room AV equipment (TV, Projectors), and provide technical support for online meetings.</p>
+                <br>
+                <div style="color: #00ffff; font-weight:bold; margin-bottom:5px;">[SOFT SKILLS & LANGUAGES]</div>
+                <div style="margin-bottom: 5px;">
+                    <span class="badge">Communication</span> <span class="badge">Problem-Solving</span> 
+                    <span class="badge">Time Management</span> <span class="badge">Teamwork & Collaboration</span>
+                </div>
+                <p>• <b>Languages:</b> Fluent in English & Vietnamese, working professionally in multinational environments.</p>
+            `,
+            exp: `
+                <div class="terminal-header">> [PORTAL 3/6] WORK EXPERIENCE HISTORY</div>
+                <div class="project-item">
+                    <b style="color:#fff; font-size:13px;">Info Vietnam Technology Co., Ltd</b><br>
+                    <i style="color:#888;">Position: IT System Engineer (Nov 2023 - Dec 2024)</i><br>
+                    • <b>Hardware Maintenance:</b> Directly deploy, repair, and maintain factory endpoint devices including printers, PCs, laptops, industrial paper shredders...<br>
+                    • <b>Software Maintenance:</b> Install and update operating systems, configure specialized office software, and provide direct technical support to end-users.<br>
+                    • <b>Procurement Management:</b> Coordinate purchasing of IT supplies; manage and archive documents strictly with large corporate clients (LGD, Pioneer, Gosei, Sumiko...).<br>
+                    • <b>System Administration:</b> Manage Windows Server, Microsoft 365/Exchange Online, Azure Entra ID infrastructure for identity management and security camera control.<br>
+                    • <b>Network Infrastructure:</b> Construct, connect, and maintain LAN and internal factory fiber optic network systems.
+                </div>
+                <div class="project-item">
+                    <b style="color:#fff; font-size:13px;">Viet Huy Audio Company</b><br>
+                    <i style="color:#888;">Position: IT Staff / Marketer (Jan 2021 - Oct 2023)</i><br>
+                    • Responsible for preparing daily, weekly, and monthly business operation reports for the board of directors.<br>
+                    • Administer social media channels, manage and exploit potential customer data lists through digital platforms (Facebook, Zalo, Website...).<br>
+                    • Safely backup internal company data and upgrade information system security barriers.<br>
+                    • Install, maintain, configure, and repair peripherals, CCTV systems, printers, computers, specialized lighting, and high-end audio systems.
+                </div>
+                <div class="project-item">
+                    <b style="color:#fff; font-size:13px;">Digital Technology Services and Trading Co., Ltd</b><br>
+                    <i style="color:#888;">Position: Intern / Technician (Jan 2016 - Nov 2018)</i><br>
+                    • Deeply proficient in hardware: Assemble, diagnose, and repair computer components (Mainboard, CPU, RAM, PSU, Storage).<br>
+                    • Execute optimized OS installation, driver updates, office suites, and other common software.<br>
+                    • Set up basic networks and maintain internal network connections (LAN, Modems, Routers configured by TP-Link, D-Link) and CCTV security camera systems.<br>
+                    • Printer Specialist: Refill cartridges, replace wearing parts, and completely resolve paper jams, faint/blank prints, or communication errors.
+                </div>
+            `,
+            projects: `
+                <div class="terminal-header">> [PORTAL 4/6] FREELANCE PROJECTS & GLOBAL PARTNERS</div>
+                <div style="font-weight:bold; color: #ff007f; margin-bottom:5px;">Freelancer | IT Support Engineer / IT Support Specialist</div>
+                <div style="color: #888; font-style:italic; margin-bottom: 8px;">Duration: March 2021 - Present (Full-time / Onsite)</div>
+                <p>Undertake technical operations, infrastructure networking, and on-site deployment of enterprise core network devices for renowned international corporations:</p>
+                <div style="margin: 8px 0; line-height: 2.3;">
+                    <span class="badge" style="background:#0055ff; color:#fff; border:none;">Fujitsu Global</span>
+                    <span class="badge" style="background:#111; color:#00ff00; border:1px solid #00ff00;">NTT Global Network</span>
+                    <span class="badge" style="background:#e60000; color:#fff; border:none;">Nike</span>
+                    <span class="badge" style="background:#ff9900; color:#fff; border:none;">AkzoNobel</span>
+                    <span class="badge" style="background:#9c27b0; color:#fff; border:none;">Perfetti Van Melle</span>
+                    <span class="badge" style="background:#00bcd4; color:#fff; border:none;">Foxconn</span>
+                    <span class="badge" style="background:#ff5722; color:#fff; border:none;">Schindler</span>
+                    <span class="badge" style="background:#4caf50; color:#fff; border:none;">MacGregor</span>
+                    <span class="badge" style="background:#607d8b; color:#fff; border:none;">RexTechnologies</span>
+                    <span class="badge" style="background:#ffaa00; color:#000; border:none;">H&M</span>
+                    <span class="badge" style="background:#a5d6a7; color:#111; border:none;">LG Display</span>
+                </div>
+                <p style="margin-top:5px;">• <b>Network Deployment:</b> Survey architectural maps, lay structural core cables, crimp connectors to professional standards, and mount technical Server Racks, Access Points, Switches, and Routers onsite.</p>
+                <p>• <b>Service Delivery:</b> Receive and resolve user tickets through international Help Desk systems (Jira, ServiceNow), ensuring SLA compliance.</p>
+                <p>• <b>Identity & Access Management:</b> Administer Microsoft Azure Entra ID to manage permissions, provision new accounts, configure security groups, and troubleshoot MFA issues.</p>
+                <p>• <b>Systems & Virtualization:</b> Support administration and maintenance of Windows/Linux Servers, operating virtualization environments on VMware ESXi and Hyper-V platforms.</p>
+            `,
+            certs: `
+                <div class="terminal-header">> [PORTAL 5/6] INTERNATIONAL PROFESSIONAL CERTIFICATES</div>
+                <div class="project-item">📌 <b>CCNA: Network Foundation</b><br><span style="color:#bbb;">Core network infrastructure foundation certificate issued by Cisco.</span></div>
+                <div class="project-item">📌 <b>ITIL® Foundation 4</b><br><span style="color:#bbb;">Global standard certificate for IT service management and operations.</span></div>
+                <div class="project-item">📌 <b>System Administration</b><br><span style="color:#bbb;">Professional system administration certificate issued by Microsoft & LinkedIn.</span></div>
+                <div class="project-item">📌 <b>Project Management Foundations</b><br><span style="color:#bbb;">Foundation certificate for effective project management methodologies.</span></div>
+            `,
+            download: `
+                <div class="terminal-header" style="color: #ff007f; border-bottom-color: #ff007f;">> [PORTAL 6/6] COMPLETION GATE - DOWNLOAD PDF PROFILE</div>
+                <p style="color: #fff; font-weight: bold; margin-bottom: 8px;">Congratulations on walking alongside the IT Buffalo to the final stop!</p>
+                <p style="margin-bottom: 15px; color: #ccc;">The system has gathered all original data. To save the professionally formatted hard copy profile of <b>Tran Huu Vu Lam</b> to your computer, please click the download button below:</p>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="btn" onclick="downloadCV()" style="background: #ff007f; color: #fff; border-color: #ff007f; box-shadow: 3px 3px 0px #fff; padding: 12px 28px; font-size:14px; letter-spacing:1px;">📥 DOWNLOAD ORIGINAL CV (PDF)</button>
+                </div>
+            `
+        }
+    };
+
+    function renderTerminal(id) {
+        const term = document.getElementById('terminalDisplay');
+        term.innerHTML = db[currentLang][id];
+        term.scrollTop = 0; 
+    }
+
+    // ==========================================
+    // HOTFIX CODE LOGIC KHỞI ĐỘNG (INITIALIZATION BUG)
+    // ==========================================
+    // BUG REPORT: Khi vua mo len thit giao dien bi mat het dau, phai doi qua EN roi bam lai VN moi hien chu chuẩn.
+    // FIXING LOGIC: Tu dong ep bien ngon ngu ao ve 'en' roi kich hoat ngay ham toggleLanguage() khi window vua nap xong.
+    // Dieu nay giup dong bo font chu Tieng Viet co dau 100% va link truoc cac terminal view ngay khi mo file.
+    renderTerminal('start_point');
+    currentLang = 'en'; 
+    toggleLanguage(); // Kich hoat lai de dong bo sang VN chu tieng Viet co dau ngay tu dau
+</script>
+<script>
+    // CHÚ THÍCH BẢO MẬT HỆ THỐNG: Khóa chuột phải và phím F12 để ngăn chặn sao chép mã nguồn thô bừa bãi
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.onkeydown = function(e) {
+        if (e.keyCode == 123) return false;
+        if (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false;
+        if (e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) return false;
+        if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+    }
+</script>
+</body>
+</html>
